@@ -10,6 +10,7 @@
 static int callback(void *NotUsed, int argc, char **argv, char **azColName);
 double haetupla(double *summa); 
 void searchdb();
+void editdb();
 sqlite3 *db;
 
 int main() {
@@ -86,6 +87,7 @@ int main() {
 	sqlite3_close(db);
 	free(ptr);
 	searchdb();
+	editdb();
 	return 0;
 }
 
@@ -213,4 +215,101 @@ void searchdb() {
 	}
 	free(statement);
 	free(hakusana);
+}
+
+void editdb() {
+
+	unsigned int max_len = 150;
+	int rc, answer, sscanf_result;
+	char *errmsg = 0, *placeh[13], *sana = malloc(max_len), *line[5], *desc = malloc(max_len);
+	char *statement = malloc(200), *marks[3], *paiva[10], *numero[3], *amount[10];
+
+	rc = sqlite3_open("./testi.db", &db);
+	if (rc != SQLITE_OK) {
+		fprintf(stderr, "Can't open database: %s\n", sqlite3_errmsg(db));
+		sqlite3_close(db);
+	}
+	/* esim sql statement edit: "UPDATE expenses SET amount = 4.99 WHERE id = 4;"*/
+	strcpy(statement, "UPDATE expenses SET ");
+	strcpy(placeh, " WHERE id = ");
+	strcpy(marks, ";");
+	answer = -1;
+	while (answer != 0) {
+		printf("|||||||||||||||||||||||||||||||||||||\n");
+		printf("SELECT WHICH FIELD YOU WANT TO EDIT\n");
+		printf("[1] Date\n");
+		printf("[2] Amount\n");
+		printf("[3] Description\n");
+		printf("[0] Don't edit anything\n");
+		fgets (line, sizeof(line), stdin);
+		sscanf_result = sscanf(line, "%d", &answer);
+		if ((sscanf_result == 0) | (sscanf_result == EOF)) {
+			printf("Answer needs to be a number between 1-3\n");
+			answer = -1;
+			break;
+		}
+		switch (answer) {
+			case 0:
+				exit(0);
+			case 1:
+				printf("Id of the entry you want to edit: ");
+				fgets(numero, sizeof(numero), stdin);
+				printf("Numero = %s\n", numero);
+				numero[strcspn(numero, "\n")] = 0;
+				printf("Example date: \"2021-11-10 10:12:00\"\n");
+				printf("New date for this entry: ");
+				fgets(sana, 23, stdin);
+				strcpy(paiva, "date = ");
+				strncat(statement, paiva, 8);
+				strncat(statement, sana, strlen(sana));
+				strncat(statement, placeh, 13);
+				strncat(statement, numero, 2);
+				strncat(statement, marks, 2);
+				answer = 0;
+				break;
+			case 2:
+				printf("Id of the entry you want to edit: ");
+				fgets(numero, sizeof(numero), stdin);
+				numero[strcspn(numero, "\n")] = 0;
+				printf("Example amount: \"5.99\"\n");
+				printf("New Amount for this entry: ");
+				fgets(sana, 20, stdin);
+				strcpy(amount, "amount = ");
+				strncat(statement, amount, 10);
+				strncat(statement, sana, strlen(sana));
+				strncat(statement, placeh, 13);
+				strncat(statement, numero, 2);
+				strncat(statement, marks, 2);
+				answer = 0;
+				break;
+			case 3:
+				printf("Id of the entry you want to edit: ");
+				fgets(numero, sizeof(numero), stdin);
+				printf("Numero = %s\n", numero);
+				numero[strcspn(numero, "\n")] = 0;
+				printf("Example description: \"Electricity bill\"\n");
+				printf("New description for this entry: ");
+				fgets(sana, max_len, stdin);
+				strcpy(desc, "desc = ");
+				strncat(statement, desc, 8);
+				strncat(statement, sana, strlen(sana));
+				strncat(statement, placeh, 13);
+				strncat(statement, numero, 2);
+				strncat(statement, marks, 2);
+				answer = 0;
+				break;
+			default:
+				break;
+		}
+	}
+	printf("Statement was: %s\n", statement);
+	rc = sqlite3_exec(db, statement, callback, 0, &errmsg);
+	if (rc != SQLITE_OK) {
+		fprintf(stderr, "Can't select data from the table: %s\n", sqlite3_errmsg(db));
+		sqlite3_close(db);
+	}
+	free(statement);
+	free(sana);
+	free(desc);
+	sqlite3_close(db);
 }
